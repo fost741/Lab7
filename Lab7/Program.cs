@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.IO;
 
 namespace Lab_7
 {
@@ -20,8 +22,11 @@ namespace Lab_7
                                     "4. Show behaviour\n" +
                                     "5. Delete object\n" +
                                     "6. Show static methods\n" +
+                                    "7. Save obj collection in file\n" +
+                                    "8. Read obj collection from file\n" +
+                                    "9. Clear obj collections\n" +
                                     "0. Exit");
-                int choice = Menu("Choose option: ", 0, 6);
+                int choice = Menu("Choose option: ", 0, 9);
                 switch (choice)
                 {
                     case 1: AddObj(instruments, maxArg); break;
@@ -30,6 +35,12 @@ namespace Lab_7
                     case 4: ShowBehaviour(instruments); break;
                     case 5: DeleteObj(instruments); break;
                     case 6: ShowStaticMethods(); break;
+                    case 7: SaveToFile(instruments); break;
+                    case 8: ReadFromFile(instruments); break;
+                    case 9:
+                        instruments.Clear();
+                        Console.WriteLine("Object collection is cleared.");
+                        break;
                     case 0:
                         Console.WriteLine("Program is ended. Goodbye!");
                         return;
@@ -48,6 +59,110 @@ namespace Lab_7
             }
         }
 
+        static void SaveToFile(List<Instruments> list)
+        {
+            if (list.Count == 0)
+            {
+                Console.WriteLine("List is empty. Nothing to save.");
+                return;
+            }
+            int sub = Menu("\nSave to file: \n1  *.csv\n2  *.json\n0 back to menu\nChoose option: ", 0, 2);
+            if (sub == 0) return;
+
+            Console.Write("Enter file name to save (e.g., instruments.csv): ");
+            string path = Console.ReadLine()?.Trim();
+            if (string.IsNullOrEmpty(path)) path = sub == 1 ? "instruments.csv" : "instruments.json";
+
+            try
+            {
+                if (sub == 1)
+                {
+                    List<string> lines = new List<string> { "Name,Family,Brand,IsElectric,KeyCount,StringCount" };
+                    foreach (var item in list)
+                    {
+                        lines.Add(item.ToString());
+                    }
+                    File.WriteAllLines(path, lines);
+                    Console.WriteLine($"Collection saved to {path} successfully.");
+                }
+                else if (sub == 2)
+                {
+                    string json = JsonConvert.SerializeObject(list, Formatting.Indented);
+                    File.WriteAllText(path, json);
+                    Console.WriteLine($"Collection saved to {path} successfully.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving to file: {ex.Message}");
+            }
+        }
+
+        static void ReadFromFile(List<Instruments> list)
+        {
+            int sub = Menu("\nRead from file: \n1  *.csv\n2  *.json\n0 back to menu\nChoose option: ", 0, 2);
+            if (sub == 0) return;
+
+            Console.Write("Enter file name to read (e.g., instruments.csv): ");
+            string path = Console.ReadLine()?.Trim();
+            if (string.IsNullOrEmpty(path))
+            {
+                Console.WriteLine("Invalid file name.");
+                return;
+            }
+
+            if (!File.Exists(path))
+            {
+                Console.WriteLine($"File {path} does not exist.");
+                return;
+            }
+
+            int loadedCount = 0;
+            try
+            {
+                if (sub == 1)
+                {
+                    string[] lines = File.ReadAllLines(path);
+                    foreach (string line in lines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        if (line.StartsWith("Name,")) continue;
+
+                        if (Instruments.TryParse(line, out Instruments inst) && inst != null)
+                        {
+                            list.Add(inst);
+                            loadedCount++;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Failed to parse line: {line}");
+                        }
+                    }
+                    Console.WriteLine($"Successfully loaded from CSV {loadedCount} instruments from {path}.");
+                }
+                else if (sub == 2)
+                {
+                    string jsonString = File.ReadAllText(path);
+                    List<Instruments> deserializedList = JsonConvert.DeserializeObject<List<Instruments>>(jsonString);
+
+                    if (deserializedList != null)
+                    {
+                        foreach (var inst in deserializedList)
+                        {
+                            list.Add(inst);
+                            loadedCount++;
+                        }
+                    }
+                    Console.WriteLine($"Successfully loaded from JSON {loadedCount} instruments from {path}.");
+                }
+                Console.WriteLine("Current valid instruments count: " + Instruments.ValidCount);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading from file: {ex.Message}");
+            }
+        }
+
         static void AddObj(List<Instruments> list, int max)
         {
             if (list.Count >= max)
@@ -58,8 +173,8 @@ namespace Lab_7
 
             Console.WriteLine("\nAdding options" +
                                 "\n1. Add manually\n" +
-                                "2. Add randomly\n" + 
-                                "3. Add in one string foemat\n");
+                                "2. Add randomly\n" +
+                                "3. Add in one string format\n");
             int mode = Menu("Choose option: ", 1, 3);
 
             Instruments inst = null;
@@ -111,7 +226,6 @@ namespace Lab_7
                     }
                 }
 
-
                 Brand selectedBrand = Brand.Yamaha;
                 while (true)
                 {
@@ -134,10 +248,8 @@ namespace Lab_7
                     string inp = Console.ReadLine();
 
                     if (inp == "1") { isElectric = true; break; }
-
                     else if (inp == "0") { isElectric = false; break; }
                     else Console.WriteLine("Invalid input. Try again.");
-
                 }
 
                 int stringCount = StringCount(name, selectedFamily);
@@ -202,11 +314,11 @@ namespace Lab_7
                     {
                         inst = Instruments.Parse(instData);
                         Console.WriteLine("Object has been generated successfuly! ");
-                            if (inst.IsElectric)
-                            {
-                                inst.CurrentVolume = Menu("Enter start volume (0-100%): ", 0, 100);
-                            }
-                            break;
+                        if (inst.IsElectric)
+                        {
+                            inst.CurrentVolume = Menu("Enter start volume (0-100%): ", 0, 100);
+                        }
+                        break;
                     } catch (Exception ex)
                     {
                         Console.WriteLine($"Error: {ex.Message}.  Please try again.");
@@ -254,28 +366,20 @@ namespace Lab_7
             }
 
             int choice = Menu("\nChoose option to search: \n1-name \n2-family \n3-brand \n4-is electric \n0-back to main menu\n", 0, 4);
-            int count = 0;
-
             List<Instruments> searchResult = new List<Instruments>();
             switch (choice)
             {
                 case 1:
-                    while (true)
+                    Console.WriteLine("Enter name to find: ");
+                    string searchName = Console.ReadLine().ToLower().Trim();
+                    if (!string.IsNullOrEmpty(searchName))
                     {
-                        Console.WriteLine("Enter name to find: ");
-                        string searchName = Console.ReadLine().ToLower().Trim();
-
-                        if (!string.IsNullOrEmpty(searchName))
-                        {
-                            searchResult = list.FindAll(x => x.Name.ToLower().Contains(searchName));
-                        }
-                        break;
+                        searchResult = list.FindAll(x => x.Name.ToLower().Contains(searchName));
                     }
                     break;
                 case 2:
                     Console.Write("Enter family (Strings, Woodwinds, Brass, Percussion, Keyboard): ");
                     string familyInp = Console.ReadLine();
-
                     if (Enum.TryParse(familyInp, true, out Family searchFamily) && Enum.IsDefined(typeof(Family), searchFamily))
                     {
                         searchResult = list.FindAll(x => x.Family == searchFamily);
@@ -289,7 +393,6 @@ namespace Lab_7
                 case 3:
                     Console.Write("Enter brand (Yamaha, Gibson, Pearl, Roland): ");
                     string brandInp = Console.ReadLine();
-
                     if (Enum.TryParse(brandInp, true, out Brand searchBrand) && Enum.IsDefined(typeof(Brand), searchBrand))
                     {
                         searchResult = list.FindAll(x => x.Brand == searchBrand);
@@ -382,7 +485,6 @@ namespace Lab_7
                             list[index-1].SetVolume(list[index - 1].CurrentVolume, room);
                             Console.WriteLine("Volume adjusted based on room type.");
                         }
-
                         break;
                     case 0:
                         return;
@@ -484,7 +586,6 @@ namespace Lab_7
                 }
                 catch (ArgumentException ex) { Console.WriteLine(ex.Message); }
                 Console.WriteLine("Invalid input. Try again.");
-
             }
         }
     }

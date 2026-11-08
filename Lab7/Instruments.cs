@@ -1,4 +1,6 @@
-﻿public class Instruments
+﻿using Newtonsoft.Json;
+
+public class Instruments
 {
     private static int validCount = 0;
     private static int totalCount = 0;
@@ -63,7 +65,7 @@
         RegisterObj();
         Console.WriteLine($"(Constructor with 6 parameters was called for {RegCode})");
     }
-
+    [JsonProperty("InstrumentName")]
     public string Name
     { get { return name; }
         set
@@ -112,7 +114,7 @@
             isElectric = value;
         }
     }
-
+    [JsonIgnore]
     public bool IsConnected
     {
         get { return isConnected; }
@@ -133,7 +135,7 @@
         }
     }
 
-  
+    [JsonIgnore]
     public bool IsTuned
     {
         get { return isTuned; }
